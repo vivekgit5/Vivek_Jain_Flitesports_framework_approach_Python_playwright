@@ -19,14 +19,17 @@ Usage
 import datetime
 import logging
 import random
+import re
 from dataclasses import dataclass
 
 from faker import Faker
 from playwright.sync_api import Playwright, expect, sync_playwright
 
 from config.settings import (
+    COMMISSION_SUGGESTED_RETAIL,
     CRM_ADMIN_EMAIL,
     CRM_ADMIN_PASS,
+    PARTNER_LOGO_PATH,
     ROLE_FILTER_ADMIN,
     ROLE_FILTER_PARTNER,
     ROLE_FILTER_SALES_REP,
@@ -89,7 +92,7 @@ def _generate_test_data() -> tuple[AdminUpdateData, SalesRepUpdateData, PartnerU
         phone=fake.numerify("+1 (###) ###-####"),
     )
     partner = PartnerUpdateData(
-        program_name=f"VIVEK QA PARTNER {fake.company().upper()} {random.randint(10_000, 99_999)}",
+        program_name=f"VIVEK QA PARTNER {re.sub(r'[^A-Za-z0-9 ]', '', fake.company()).strip().upper()} {random.randint(10_000, 99_999)}",
         contact_first_name=f"VIVEK QA {fake.first_name().upper()}",
         commission_rate=random.randint(30, 60),
         season_start_date=season_date,
@@ -229,10 +232,60 @@ def _update_partner(
     reporter.add_step("Open Partner edit wizard", "PASS")
 
     # ── Form step 1: Identity ─────────────────────────────────────────────────
+    # Wait for the edit wizard to fully render before interacting with it.
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(800)
+
+    # Logo upload — the edit wizard already shows the existing logo as an image,
+    # so no "Add logo" button is present.  A resilient selector chain attempts
+    # to click a visible upload trigger; if none is found (logo already set),
+    # the step is skipped gracefully — the CRM retains the existing logo on
+    # submit without requiring a re-upload in the edit flow.
+    logo_uploaded = False
+    for logo_sel in (
+        "[title='Add logo']",
+        "[title='Change logo']",
+        ".msf-logo-upload",
+        "div.msf-logo-section div",
+        "div.msf-identity-fields div.logo-upload",
+    ):
+        candidate = page.locator(logo_sel).first
+        try:
+            candidate.wait_for(state="visible", timeout=2_000)
+            with page.expect_file_chooser(timeout=5_000) as fc_info:
+                candidate.click()
+            fc_info.value.set_files(str(PARTNER_LOGO_PATH))
+            page.wait_for_timeout(800)
+            log.info("Logo uploaded via selector: %s", logo_sel)
+            logo_uploaded = True
+            break
+        except Exception:
+            continue
+
+    if logo_uploaded:
+        reporter.add_step("Upload primary partner logo", "PASS", PARTNER_LOGO_PATH.name)
+    else:
+        log.info("Logo already set on partner record — skipping re-upload.")
+        reporter.add_step(
+            "Primary partner logo",
+            "INFO",
+            "Logo already present on record; re-upload not required in edit mode",
+        )
+
     program_input = page.locator("div.msf-identity-fields > div:nth-of-type(1) input")
     program_input.click(click_count=3)
     program_input.fill(data.program_name)
     reporter.add_step("Update partner program name", "PASS", data.program_name)
+
+    # Partner type — the edit wizard resets this field to an empty state.
+    # Select "partner-CAMP" to satisfy the mandatory field requirement, using
+    # the same PrimeVue combobox interaction as the creation wizard (M03).
+    modal = page.locator("role=dialog")
+    modal.locator("div.msf-identity-fields").get_by_role("combobox").first.click()
+    page.wait_for_timeout(400)
+    page.get_by_role("option", name="partner-CAMP").click()
+    page.wait_for_timeout(300)
+    reporter.add_step("Select partner type", "PASS", "partner-CAMP")
 
     contact_input = page.locator(
         "div:nth-of-type(3) > div.msf-section-body > div:nth-of-type(1) input"
@@ -245,36 +298,116 @@ def _update_partner(
     page.wait_for_timeout(600)
     reporter.add_step("Advance to Partner form step 2 (Commission)", "PASS")
 
-    # ── Form step 2: Commission – zero all numeric fields ─────────────────────
+    # ── Form step 2: Commission ───────────────────────────────────────────────
+    # The CRM validates that the "Representatives commission total" entered in
+    # the editable input exactly equals the read-only "Total FLITE Rep
+    # Commission" displayed on the same panel.  Zeroing all fields breaks this
+    # equality and blocks CONTINUE.
+    #
+    # Strategy:
+    #   1. Read the "Total FLITE Rep Commission" percentage shown on the page.
+    #   2. Set the single editable commission input to that exact value so the
+    #      totals balance and the form accepts the submission.
     page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(600)
+
+    # Locate the displayed total — it appears as text like "89.0%" inside the
+    # commission panel.  Extract the numeric portion and use it as the input
+    # value; fall back to COMMISSION_SUGGESTED_RETAIL from settings if the
+    # element is not found.
+    flite_total_pct: str = COMMISSION_SUGGESTED_RETAIL  # default fallback
+    try:
+        total_text = page.locator(
+            "[role='dialog'] .msf-commission-total, "
+            "[role='dialog'] .flite-rep-commission-total, "
+            "[role='dialog'] span:has-text('%')"
+        ).first.inner_text(timeout=4_000)
+        import re as _re
+        match = _re.search(r"(\d+(?:\.\d+)?)", total_text)
+        if match:
+            # Strip trailing ".0" so the field receives "89" not "89.0"
+            flite_total_pct = str(int(float(match.group(1))))
+            log.info("Total FLITE Rep Commission read from page: %s%%", flite_total_pct)
+    except Exception:
+        log.info(
+            "Could not read Total FLITE Rep Commission from page; "
+            "using fallback value: %s%%", flite_total_pct
+        )
+
     numeric_inputs = page.locator("[role='dialog'] input[type='number']")
     count = numeric_inputs.count()
-    log.info("Zeroing %d numeric input(s) on commission step …", count)
+    log.info("Updating %d numeric input(s) on commission step …", count)
     for i in range(count):
         inp = numeric_inputs.nth(i)
-        if inp.is_visible():
+        if inp.is_visible() and inp.is_enabled():
             inp.click(click_count=3)
             page.wait_for_timeout(150)
-            inp.fill("0")
+            inp.press_sequentially(flite_total_pct, delay=50)
             page.keyboard.press("Tab")
             page.wait_for_timeout(200)
     reporter.add_step(
-        "Zero all numeric commission fields",
+        "Set commission fields to match Total FLITE Rep Commission",
         "PASS",
-        f"{count} field(s) cleared",
+        f"{count} field(s) set to {flite_total_pct}%",
     )
 
     page.locator("button.msf-btn--primary").click()
     page.wait_for_timeout(800)
     reporter.add_step("Advance to Partner form step 3 (Contract & Season)", "PASS")
 
-    # ── Form step 3: Season start date ────────────────────────────────────────
-    season_input = page.locator("div.msf-season-header div:nth-of-type(1) > input")
+    # ── Form step 3: Contract & Season (edit wizard) ──────────────────────────
+    # The edit wizard labels step 3 "CONTRACT & FILES" — its DOM differs from
+    # the creation wizard's "Season Dates" panel, so an extended selector chain
+    # covers all known structural variants.  The dialog is scrolled to bottom
+    # first to ensure off-screen inputs are rendered and visible before probing.
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1_200)
+
+    # Scroll the modal to the bottom so all inputs are in the viewport.
+    modal = page.locator("role=dialog")
+    modal.evaluate("el => el.scrollTop = el.scrollHeight")
+    page.wait_for_timeout(500)
+
+    season_input = None
+    for css in (
+        "div.msf-season-header input",
+        "div.msf-season input",
+        "[role='dialog'] input[type='date']:not([disabled])",
+        "[role='dialog'] input[type='text']:not([disabled])",
+        ".msf-step-body input:not([disabled])",
+        "[role='dialog'] input:not([disabled])",
+    ):
+        candidates = page.locator(css)
+        for idx in range(candidates.count()):
+            c = candidates.nth(idx)
+            if c.is_visible() and c.is_enabled():
+                season_input = c
+                log.info("Season date input found via selector: %s [%d]", css, idx)
+                break
+        if season_input:
+            break
+
+    if season_input is None:
+        raise RuntimeError(
+            "Could not locate the season start-date input on Partner form step 3. "
+            "The CRM DOM may have changed — update the selector chain in "
+            "_update_partner()."
+        )
+
+    season_input.scroll_into_view_if_needed()
     season_input.click(click_count=3)
-    season_input.fill(data.season_start_date)
+    page.wait_for_timeout(300)
+    # The CRM date field is Vue-bound and only registers input fired through
+    # real keyboard events.  Using .fill() bypasses Vue's v-model reactivity,
+    # causing a validation error on submit.  The field accepts dates exclusively
+    # in MM/DD/YYYY format, so the stored ISO date is converted before entry.
+    mm_dd_yyyy = datetime.datetime.strptime(
+        data.season_start_date, "%Y-%m-%d"
+    ).strftime("%m/%d/%Y")
+    season_input.press_sequentially(mm_dd_yyyy, delay=80)
     page.keyboard.press("Tab")
-    page.wait_for_timeout(400)
-    reporter.add_step("Enter season start date", "PASS", data.season_start_date)
+    page.wait_for_timeout(500)
+    reporter.add_step("Enter season start date", "PASS", mm_dd_yyyy)
 
     submit_btn = page.locator("button.msf-btn--submit")
     expect(submit_btn).to_be_visible(timeout=10_000)

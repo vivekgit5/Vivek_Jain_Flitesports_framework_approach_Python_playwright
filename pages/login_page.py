@@ -71,8 +71,31 @@ class LoginPage:
         Handles two menu-trigger variants:
           * ``span.user-role``  (standard admin / sales-rep sessions)
           * ``header i``        (super-admin sessions)
+
+        Before attempting to open the menu, any Toastify notification banners
+        are given up to 8 seconds to clear.  These overlays intercept pointer
+        events and will cause the click to time out if not dismissed first.
         """
         log.info("Signing out …")
+
+        # Wait for any post-submission toast notifications to fully disappear
+        # before interacting with the header, as they sit in a higher z-index
+        # layer and block pointer events on elements beneath them.
+        try:
+            self._page.wait_for_selector(
+                ".Toastify__toast-container", state="hidden", timeout=8_000
+            )
+        except Exception:
+            pass  # No lingering toast — proceed immediately
+
+        # Also ensure no modal overlay is still mounted on top of the page.
+        try:
+            self._page.wait_for_selector(
+                "[role='dialog']", state="hidden", timeout=5_000
+            )
+        except Exception:
+            pass
+
         user_role = self._page.locator(self._SEL_USER_ROLE)
         if user_role.count() > 0 and user_role.is_visible():
             user_role.click()

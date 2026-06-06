@@ -50,6 +50,20 @@ ROLE_FILTER_ADMIN     = "6"
 ROLE_FILTER_SALES_REP = "4"
 ROLE_FILTER_PARTNER   = "3"
 
+# ── Static test assets — Partner logos ────────────────────────────────────────
+# All four official Flitesports logo variants are stored under data/logos/.
+# PARTNER_LOGO_PATH is the default logo uploaded to the Partner Program Identity
+# form in both the creation wizard (M03) and the update wizard (M04).
+# The CRM blocks form submission if the primary logo field is left empty.
+_LOGOS_DIR             = DATA_DIR / "logos"
+LOGO_BLACK             = _LOGOS_DIR / "flite_logo_black.png"
+LOGO_GRAY              = _LOGOS_DIR / "flite_logo_gray.png"
+LOGO_RED               = _LOGOS_DIR / "flite_logo_red.png"
+LOGO_OLIVE_GREEN       = _LOGOS_DIR / "flite_logo_olive_green.png"
+
+# Default logo used by M03 / M04 automation runs
+PARTNER_LOGO_PATH      = LOGO_OLIVE_GREEN
+
 # ── Commission defaults used in partner creation / update ─────────────────────
 COMMISSION_WHOLESALE        = "45"
 COMMISSION_RETAIL           = "67"

@@ -24,6 +24,7 @@ Usage
 import datetime
 import logging
 import random
+import re
 from dataclasses import dataclass
 
 from faker import Faker
@@ -38,6 +39,7 @@ from config.settings import (
     CONTRACT_ENABLED,
     CRM_ADMIN_EMAIL,
     CRM_ADMIN_PASS,
+    PARTNER_LOGO_PATH,
 )
 from core.browser import browser_session
 from core.reporter import XlsxReporter
@@ -80,7 +82,7 @@ def _generate_partner_data() -> PartnerData:
     today      = datetime.date.today()
 
     data = PartnerData(
-        program_name      = f"QA Partner {fake.company()} {unique_tag}",
+        program_name      = f"QA Partner {re.sub(r'[^A-Za-z0-9 ]', '', fake.company()).strip()} {unique_tag}",
         first_name        = f"QA {fake.first_name()}",
         last_name         = f"{fake.last_name()} Partner",
         phone             = fake.numerify("+1 (###) ###-####"),
@@ -112,6 +114,19 @@ def _step1_program_identity(page, partner: PartnerData, reporter: XlsxReporter) 
     modal.locator("select").first.select_option(label="PARTNER/CLUB")
     page.wait_for_selector("div.msf-identity-fields input", state="visible", timeout=15_000)
     reporter.add_step("Select PARTNER/CLUB user role", "PASS")
+
+    # Primary program logo — required by the CRM; form submission is blocked
+    # without it.  Playwright's expect_file_chooser() intercepts the native OS
+    # file-upload dialog that the CRM opens when the Add Logo button is clicked,
+    # and programmatically supplies the logo file without any OS dialog
+    # interaction.  The button is located via its title attribute ("Add logo")
+    # which is the stable, visible-text-independent identifier exposed by the
+    # CRM form element.
+    with page.expect_file_chooser() as fc_info:
+        modal.locator("[title='Add logo']").first.click()
+    fc_info.value.set_files(str(PARTNER_LOGO_PATH))
+    page.wait_for_timeout(800)
+    reporter.add_step("Upload primary partner logo", "PASS", PARTNER_LOGO_PATH.name)
 
     # Program name
     modal.locator("div.msf-identity-fields > div:nth-of-type(1) input").fill(partner.program_name)
@@ -286,10 +301,47 @@ def _step5_season_and_submit(page, partner: PartnerData, reporter: XlsxReporter)
     log.info("── Wizard Step 5: Season Dates ──")
     modal = page.locator("role=dialog")
 
-    season_input = modal.locator("div.msf-season-header div:nth-of-type(1) > input")
+    # Allow the step-5 panel to fully render before interacting with it.
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1_200)
+
+    # Locate the season start-date input using a resilient selector chain:
+    # prefer the section-header scoped input; fall back to the first
+    # date-type input visible anywhere in the dialog.
+    season_input = None
+    for css in (
+        "div.msf-season-header input",
+        "div.msf-season input",
+        "input[type='date']",
+        ".msf-step-body input",
+    ):
+        candidate = modal.locator(css).first
+        if candidate.is_visible():
+            season_input = candidate
+            log.info("Season date input found via selector: %s", css)
+            break
+
+    if season_input is None:
+        raise RuntimeError(
+            "Could not locate the season start-date input on Wizard Step 5. "
+            "The CRM DOM may have changed — update the selector chain in "
+            "_step5_season_and_submit()."
+        )
+
     season_input.click(click_count=3)
-    season_input.fill(partner.season_start_date)
-    reporter.add_step("Enter season start date", "PASS", partner.season_start_date)
+    page.wait_for_timeout(300)
+    # The CRM date field is Vue-bound and only registers input fired through
+    # real keyboard events.  Using .fill() bypasses Vue's v-model reactivity,
+    # causing the "Term 1 is missing a start date" validation error.
+    # The field accepts dates exclusively in MM/DD/YYYY format, so the stored
+    # ISO date (YYYY-MM-DD) is converted before entry.
+    mm_dd_yyyy = datetime.datetime.strptime(
+        partner.season_start_date, "%Y-%m-%d"
+    ).strftime("%m/%d/%Y")
+    season_input.press_sequentially(mm_dd_yyyy, delay=80)
+    page.keyboard.press("Tab")
+    page.wait_for_timeout(500)
+    reporter.add_step("Enter season start date", "PASS", mm_dd_yyyy)
 
     submit_btn = page.locator("button.msf-btn--submit")
     submit_btn.scroll_into_view_if_needed()

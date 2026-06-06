@@ -60,8 +60,8 @@ Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/vivekgit5/Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python.git
-cd Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python
+git clone https://github.com/vivekgit5/Vivek_Jain_Flitesports_framework_approach_Python_playwright.git
+cd Vivek_Jain_Flitesports_framework_approach_Python_playwright
 ```
 
 ### 2. Create and activate a virtual environment
@@ -197,6 +197,29 @@ no module code needs editing for environment switches.
 | `SHOPIFY_STORE_PASSWORD` | Store access password |
 | `FALCON_APP_LAUNCHER_URL` | Falcon staging launcher URL |
 | `FALCON_ORDER_RANGE` | Order number range for M06 comparison |
+
+---
+
+## Data-Generation Constraints
+
+### Partner Program Name — Alphanumeric-Only Enforcement
+
+The **Program Name** field in the Flitesports CRM does not accept special
+characters (e.g. `&`, `-`, `.`, `'`, `,`).  
+To ensure reliable form submission across **M03** and **M04**, all
+Faker-generated company names are sanitised at data-generation time using a
+regular-expression filter that retains only alphanumeric characters and spaces:
+
+```python
+re.sub(r'[^A-Za-z0-9 ]', '', fake.company()).strip()
+```
+
+This constraint is enforced in:
+
+| Module | Field affected |
+|--------|---------------|
+| `m03_create_new_partner.py` | `program_name` (Partner creation wizard — Step 1) |
+| `m04_update_users.py` | `program_name` (Partner update flow) |
 
 ---
 
