@@ -1,0 +1,34 @@
+# ── Python virtual environment ─────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Python cache ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# ── Generated reports (local artefacts, not committed) ─────────────────────────
+reports/
+downloads/
+
+# ── Playwright browser binaries ────────────────────────────────────────────────
+playwright/
+
+# ── OS artefacts ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE / editor ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Credentials / secrets (never commit) ──────────────────────────────────────
+.env
+*.env
+secrets.py

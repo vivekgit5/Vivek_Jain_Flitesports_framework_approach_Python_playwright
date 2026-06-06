@@ -1,0 +1,9 @@
+# ── Core automation ────────────────────────────────────────────────────────────
+playwright>=1.44.0
+
+# ── Test-data generation ───────────────────────────────────────────────────────
+faker>=25.0.0
+
+# ── XLSX report generation + workbook parsing ──────────────────────────────────
+openpyxl>=3.1.2
+pandas>=2.2.0
