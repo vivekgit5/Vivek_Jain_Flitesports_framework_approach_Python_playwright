@@ -155,18 +155,22 @@ python -m modules.m04_update_users
 **To run Group 1 in isolation** (without executing the Shopify / Falcon modules):
 
 ```bash
-python run_staging.py
+python run_custom_staging_site.py
 ```
+
+---
+
+### Group 2 — Vivek Existing Site: Flitesports (Including Falcon)
 
 These modules exercise the **live Flitesports Shopify storefront** and the
 **Falcon** order-management application.  They are housed under the dedicated
-subdirectory `modules/Vivek_Existing_Site_Flitesports_Including_Falcon/` and
-run sequentially after Group 1 completes.
+sub-package `modules/Vivek_Existing_Site_Flitesports_Including_Falcon/` and
+run sequentially after Group 1 completes in every full-suite run.
 
 | Module | Description |
 |--------|-------------|
 | M05 | Purchase Products on Shopify Staging (End-to-End) |
-| M06 | Falcon Order Exporter vs Order Generator Comparison |
+| M06 | Falcon Stage: Order Exporter vs Order Generator Comparison |
 
 #### M05 — Purchase Products on Shopify Staging (End-to-End)
 > **Group 2 — Vivek Existing Site: Flitesports** &nbsp;|&nbsp; `modules/Vivek_Existing_Site_Flitesports_Including_Falcon/m05_purchase_products_shopify.py`
