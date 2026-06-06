@@ -12,33 +12,44 @@ Built with **Python + Playwright** following a **Page Object Model (POM)** archi
 Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python/
 │
 ├── config/
-│   └── settings.py          # All URLs, credentials, and environment constants
+│   └── settings.py                    # All URLs, credentials, and environment constants
 │
 ├── core/
-│   ├── browser.py           # Browser session factory (context manager)
-│   └── reporter.py          # XLSX report generator (step timings, pass/fail)
+│   ├── browser.py                     # Browser session factory (context manager)
+│   └── reporter.py                    # XLSX report generator (step timings, pass/fail)
 │
-├── pages/                   # Page Object Model — one class per application area
-│   ├── login_page.py        # CRM login + sign-out
-│   ├── users_page.py        # CRM Users module (navigate, filter, search, edit)
-│   ├── shopify_page.py      # Shopify storefront (auth, products, checkout)
-│   └── falcon_page.py       # Falcon App Launcher (Order Exporter / Generator)
+├── pages/                             # Page Object Model — one class per application area
+│   ├── login_page.py                  # CRM login + sign-out
+│   ├── users_page.py                  # CRM Users module (navigate, filter, search, edit)
+│   ├── shopify_page.py                # Shopify storefront (auth, products, checkout)
+│   └── falcon_page.py                 # Falcon App Launcher (Order Exporter / Generator)
 │
-├── modules/                 # Executable automation modules (M01–M06)
+├── modules/
+│   │
+│   │   # ── Group 1: Vivek Custom Staging Site — Flitesports CRM (M01–M04) ──
 │   ├── m01_create_admin_user.py
 │   ├── m02_create_sales_rep.py
 │   ├── m03_create_new_partner.py
 │   ├── m04_update_users.py
-│   ├── m05_purchase_products_shopify.py
-│   └── m06_falcon_order_comparison.py
+│   │
+│   └── Vivek_Existing_Site_Flitesports_Including_Falcon/
+│       │   # ── Group 2: Vivek Existing Site — Flitesports + Falcon (M05–M06) ──
+│       ├── m05_purchase_products_shopify.py
+│       └── m06_falcon_order_comparison.py
 │
-├── data/                    # Static test data files (JSON recordings, etc.)
-├── reports/                 # Auto-generated XLSX execution reports (git-ignored)
-├── downloads/               # Downloaded files from Falcon (git-ignored)
+├── data/
+│   └── logos/                         # Official Flitesports partner logo variants
+│       ├── flite_logo_black.png
+│       ├── flite_logo_gray.png
+│       ├── flite_logo_red.png
+│       └── flite_logo_olive_green.png  # Default logo used in automation
 │
-├── run_all.py               # Master runner — executes all modules in sequence
-├── requirements.txt         # Python package dependencies
-└── README.md                # This file
+├── reports/                           # Auto-generated XLSX execution reports (git-ignored)
+├── downloads/                         # Downloaded files from Falcon (git-ignored)
+│
+├── run_all.py                         # Master runner — executes both groups in sequence
+├── requirements.txt                   # Python package dependencies
+└── README.md                          # This file
 ```
 
 ---
@@ -90,65 +101,110 @@ python -m playwright install chromium
 
 ---
 
-## Running Individual Modules
+## Module Groups
 
-All modules are run from the **project root** directory.
+The automation suite is divided into two groups that correspond to the two
+distinct application environments under test.
 
-### M01 — Create Admin User
+---
+
+### Group 1 — Vivek Custom Staging Site: Flitesports CRM
+
+These modules exercise the Flitesports **CRM staging environment** and are
+executed first in every run.
+
+| Module | Description |
+|--------|-------------|
+| M01 | Create Admin User |
+| M02 | Create Sales Representative |
+| M03 | Create New Partner (Super-Admin) |
+| M04 | Update Admin, Sales Rep & Partner |
+
+#### M01 — Create Admin User
 Creates a new CRM admin user with Faker-generated identity and contact details.
 
 ```bash
 python -m modules.m01_create_admin_user
 ```
 
-### M02 — Create Sales Representative
+#### M02 — Create Sales Representative
 Creates a new Sales Rep user, assigns a partner and account manager.
 
 ```bash
 python -m modules.m02_create_sales_rep
 ```
 
-### M03 — Create New Partner (Super-Admin)
-Runs the 5-step partner creation wizard: program identity, commissions, rep
-assignment, partner commissions, and season dates.
+#### M03 — Create New Partner (Super-Admin)
+Runs the 5-step partner creation wizard: program identity (including logo
+upload), commissions, rep assignment, partner commissions, and season dates.
 
 ```bash
 python -m modules.m03_create_new_partner
 ```
 
-### M04 — Update Admin, Sales Rep, and Partner
-Sequentially updates an existing admin user, a sales rep, and a partner record.
+#### M04 — Update Admin, Sales Rep, and Partner
+Sequentially updates an existing admin user, a sales rep, and a partner record
+(including partner type selection and commission equality balancing).
 
 ```bash
 python -m modules.m04_update_users
 ```
 
-### M05 — Purchase Products on Shopify Staging (End-to-End)
+---
+
+### Group 2 — Vivek Existing Site: Flitesports (Including Falcon)
+
+These modules exercise the **live Flitesports Shopify storefront** and the
+**Falcon** order-management application.  They are housed under the dedicated
+subdirectory `modules/Vivek_Existing_Site_Flitesports_Including_Falcon/` and
+run sequentially after Group 1 completes.
+
+| Module | Description |
+|--------|-------------|
+| M05 | Purchase Products on Shopify Staging (End-to-End) |
+| M06 | Falcon Order Exporter vs Order Generator Comparison |
+
+#### M05 — Purchase Products on Shopify Staging (End-to-End)
 Full storefront purchase flow: store auth → product search → add 4 products →
 cart confirmation → guest checkout (shipping + payment) → order confirmation.
 
 ```bash
-python -m modules.m05_purchase_products_shopify
+python -m modules.Vivek_Existing_Site_Flitesports_Including_Falcon.m05_purchase_products_shopify
 ```
 
-### M06 — Falcon Stage: Order Exporter vs Order Generator Comparison
+#### M06 — Falcon Stage: Order Exporter vs Order Generator Comparison
 Downloads both Excel workbooks from the Falcon staging environment, performs a
 field-by-field comparison by Order ID, and produces two detailed XLSX reports.
 
 ```bash
-python -m modules.m06_falcon_order_comparison
+python -m modules.Vivek_Existing_Site_Flitesports_Including_Falcon.m06_falcon_order_comparison
 ```
 
 ---
 
-## Running All Modules in Sequence
+## Running the Full Suite
 
 ```bash
 python run_all.py
 ```
 
-This executes M01 through M06 in order and prints a consolidated summary table
-showing the outcome and total duration (in seconds) for each module.
+`run_all.py` executes both groups **in sequence** and prints a consolidated
+summary table grouped by environment, showing the outcome and total duration
+(in seconds) for each module:
+
+```
+[ Vivek Custom Staging Site — Flitesports CRM ]
+  Code    Module                                          Status    Duration (s)
+  ──────────────────────────────────────────────────────────────────────────
+  ✓ M01   Create Admin User                               PASSED    12.30s
+  ✓ M02   Create Sales Representative                     PASSED    14.10s
+  ✓ M03   Create New Partner (Super-Admin)                PASSED    47.80s
+  ✓ M04   Update Admin, Sales Rep & Partner               PASSED    62.50s
+
+[ Vivek Existing Site — Flitesports (Including Falcon) ]
+  ✓ M05   Purchase Products on Shopify Staging            PASSED    38.20s
+  ✓ M06   Falcon Order Exporter vs Generator              PASSED    55.90s
+```
 
 ---
 
