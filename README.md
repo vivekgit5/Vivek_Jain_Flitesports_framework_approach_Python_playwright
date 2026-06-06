@@ -48,7 +48,7 @@ Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python/
 ├── downloads/                         # Downloaded files from Falcon (git-ignored)
 │
 ├── run_all.py                         # Master runner — executes both groups in sequence
-├── run_staging.py                     # Runner — Group 1 only (M01–M04, CRM staging)
+├── run_custom_staging_site.py            # Runner — Group 1 only (M01–M04, CRM staging)
 ├── run_existing_site.py               # Runner — Group 2 only (M05–M06, Shopify + Falcon)
 ├── requirements.txt                   # Python package dependencies
 └── README.md                          # This file
@@ -206,7 +206,7 @@ summary table grouped by environment, showing the outcome and total duration
 
 | Command | Scope |
 |---------|-------|
-| `python run_staging.py` | Group 1 only — Vivek Custom Staging Site: Flitesports (M01–M04) |
+| `python run_custom_staging_site.py` | Group 1 only — Vivek Custom Staging Site: Flitesports (M01–M04) |
 | `python run_existing_site.py` | Group 2 only — Vivek Existing Site: Flitesports Including Falcon (M05–M06) |
 | `python run_all.py` | Both groups in sequence (full suite) |
 

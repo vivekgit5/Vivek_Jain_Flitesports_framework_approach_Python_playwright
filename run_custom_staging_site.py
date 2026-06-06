@@ -1,5 +1,5 @@
 """
-run_staging.py – Runner for Group 1: Vivek Custom Staging Site — Flitesports
+run_custom_staging_site.py – Runner for Group 1: Vivek Custom Staging Site — Flitesports
 
 Executes only the CRM staging-site modules (M01–M04) in sequence:
 
@@ -13,7 +13,7 @@ environment in isolation, without executing the Shopify / Falcon modules.
 
 Usage
 -----
-    python run_staging.py
+    python run_custom_staging_site.py
 
 To run the full suite (both groups), use:
     python run_all.py

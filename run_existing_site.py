@@ -18,7 +18,7 @@ To run the full suite (both groups), use:
     python run_all.py
 
 To run the staging group only (M01–M04), use:
-    python run_staging.py
+    python run_custom_staging_site.py
 """
 
 import logging
