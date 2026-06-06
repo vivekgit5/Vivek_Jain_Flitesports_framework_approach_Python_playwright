@@ -169,6 +169,8 @@ run sequentially after Group 1 completes.
 | M06 | Falcon Order Exporter vs Order Generator Comparison |
 
 #### M05 — Purchase Products on Shopify Staging (End-to-End)
+> **Group 2 — Vivek Existing Site: Flitesports** &nbsp;|&nbsp; `modules/Vivek_Existing_Site_Flitesports_Including_Falcon/m05_purchase_products_shopify.py`
+
 Full storefront purchase flow: store auth → product search → add 4 products →
 cart confirmation → guest checkout (shipping + payment) → order confirmation.
 
@@ -177,6 +179,8 @@ python -m modules.Vivek_Existing_Site_Flitesports_Including_Falcon.m05_purchase_
 ```
 
 #### M06 — Falcon Stage: Order Exporter vs Order Generator Comparison
+> **Group 2 — Vivek Existing Site: Flitesports** &nbsp;|&nbsp; `modules/Vivek_Existing_Site_Flitesports_Including_Falcon/m06_falcon_order_comparison.py`
+
 Downloads both Excel workbooks from the Falcon staging environment, performs a
 field-by-field comparison by Order ID, and produces two detailed XLSX reports.
 
