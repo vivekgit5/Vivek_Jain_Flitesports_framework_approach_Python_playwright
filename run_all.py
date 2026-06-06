@@ -4,7 +4,7 @@ run_all.py – Master test runner for the Flitesports automation framework.
 Executes all modules in two logically separated groups that reflect the
 two distinct application environments under test:
 
-  Group 1 – Vivek Custom Staging Site — Flitesports CRM
+  Group 1 – Vivek Custom Staging Site — Flitesports
   -------------------------------------------------------
   M01  Create Admin User
   M02  Create Sales Representative
@@ -46,7 +46,7 @@ logging.basicConfig(
 #
 # Group 1: CRM / custom staging-site modules (M01–M04)
 GROUP_STAGING = {
-    "label": "Vivek Custom Staging Site — Flitesports CRM",
+    "label": "Vivek Custom Staging Site — Flitesports",
     "modules": [
         ("M01", "modules.m01_create_admin_user",        "Create Admin User"),
         ("M02", "modules.m02_create_sales_rep",         "Create Sales Representative"),

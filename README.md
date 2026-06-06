@@ -26,7 +26,7 @@ Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python/
 │
 ├── modules/
 │   │
-│   │   # ── Group 1: Vivek Custom Staging Site — Flitesports CRM (M01–M04) ──
+│   │   # ── Group 1: Vivek Custom Staging Site — Flitesports (M01–M04) ──
 │   ├── m01_create_admin_user.py
 │   ├── m02_create_sales_rep.py
 │   ├── m03_create_new_partner.py
@@ -48,6 +48,8 @@ Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python/
 ├── downloads/                         # Downloaded files from Falcon (git-ignored)
 │
 ├── run_all.py                         # Master runner — executes both groups in sequence
+├── run_staging.py                     # Runner — Group 1 only (M01–M04, CRM staging)
+├── run_existing_site.py               # Runner — Group 2 only (M05–M06, Shopify + Falcon)
 ├── requirements.txt                   # Python package dependencies
 └── README.md                          # This file
 ```
@@ -108,10 +110,10 @@ distinct application environments under test.
 
 ---
 
-### Group 1 — Vivek Custom Staging Site: Flitesports CRM
+### Group 1 — Vivek Custom Staging Site: Flitesports
 
 These modules exercise the Flitesports **CRM staging environment** and are
-executed first in every run.
+executed first in every full-suite run.
 
 | Module | Description |
 |--------|-------------|
@@ -150,9 +152,11 @@ Sequentially updates an existing admin user, a sales rep, and a partner record
 python -m modules.m04_update_users
 ```
 
----
+**To run Group 1 in isolation** (without executing the Shopify / Falcon modules):
 
-### Group 2 — Vivek Existing Site: Flitesports (Including Falcon)
+```bash
+python run_staging.py
+```
 
 These modules exercise the **live Flitesports Shopify storefront** and the
 **Falcon** order-management application.  They are housed under the dedicated
@@ -180,6 +184,12 @@ field-by-field comparison by Order ID, and produces two detailed XLSX reports.
 python -m modules.Vivek_Existing_Site_Flitesports_Including_Falcon.m06_falcon_order_comparison
 ```
 
+**To run Group 2 in isolation** (without executing the CRM staging modules):
+
+```bash
+python run_existing_site.py
+```
+
 ---
 
 ## Running the Full Suite
@@ -190,10 +200,20 @@ python run_all.py
 
 `run_all.py` executes both groups **in sequence** and prints a consolidated
 summary table grouped by environment, showing the outcome and total duration
-(in seconds) for each module:
+(in seconds) for each module.
+
+## Running a Specific Group
+
+| Command | Scope |
+|---------|-------|
+| `python run_staging.py` | Group 1 only — Vivek Custom Staging Site: Flitesports (M01–M04) |
+| `python run_existing_site.py` | Group 2 only — Vivek Existing Site: Flitesports Including Falcon (M05–M06) |
+| `python run_all.py` | Both groups in sequence (full suite) |
+
+**Sample output (`run_all.py`):**
 
 ```
-[ Vivek Custom Staging Site — Flitesports CRM ]
+[ Vivek Custom Staging Site — Flitesports ]
   Code    Module                                          Status    Duration (s)
   ──────────────────────────────────────────────────────────────────────────
   ✓ M01   Create Admin User                               PASSED    12.30s
