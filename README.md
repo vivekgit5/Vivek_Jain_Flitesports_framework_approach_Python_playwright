@@ -26,11 +26,12 @@ Vivek_Jain_Custom_changes_Flitesports_Framework_Automation_Playwriter_Python/
 │
 ├── modules/
 │   │
-│   │   # ── Group 1: Vivek Custom Staging Site — Flitesports (M01–M04) ──
+│   │   # ── Group 1: Vivek Custom Staging Site — Flitesports (M01–M04, M07) ──
 │   ├── m01_create_admin_user.py
 │   ├── m02_create_sales_rep.py
 │   ├── m03_create_new_partner.py
 │   ├── m04_update_users.py
+│   ├── m07_create_master_product_local_customization.py
 │   │
 │   └── Vivek_Existing_Site_Flitesports_Including_Falcon/
 │       │   # ── Group 2: Vivek Existing Site — Flitesports + Falcon (M05–M06) ──
@@ -121,6 +122,7 @@ executed first in every full-suite run.
 | M02 | Create Sales Representative |
 | M03 | Create New Partner (Super-Admin) |
 | M04 | Update Admin, Sales Rep & Partner |
+| M07 | Create New Master Product (Local Customization) |
 
 #### M01 — Create Admin User
 Creates a new CRM admin user with Faker-generated identity and contact details.
@@ -150,6 +152,30 @@ Sequentially updates an existing admin user, a sales rep, and a partner record
 
 ```bash
 python -m modules.m04_update_users
+```
+
+#### M07 — Create New Master Product (Local Customization)
+Logs in as CRM super-admin, opens the first partner collection under
+Master Products → Local Customization, and creates a new product end-to-end:
+
+- **Product name** — Faker-generated (`QA VIVEK MASTER PRODUCT MAN <random>`)
+- **Description** — short hardcoded test text entered via Quill rich-text editor
+- **Category / gender / sub-gender** — Cotton category, Youth / Boy
+- **Product image** — uploads `product_img1.png` from the configured local path
+- **Product type** — types "cotton blend hooded sweatshirt" into the autocomplete and selects the suggestion
+- **Color** — GREY
+- **Sport attributes** — BASEBALL, BASKETBALL, LACROSSE
+- **FLITE platform group sport(s)** — selects "COTTON-BLEND COLLECTION - HEAT PRESS"
+- **Custom option** — adds Player Number add-on with YES / NO values
+- **Variant** — adds YOUTH SMALL size; fills unique Faker-generated SKU and price for both rows
+- **Assign variant images** — clicks the image-assign trigger on each variant row and confirms via the modal (2 of 2)
+- **Logo placements** — enables available placement checkboxes
+- **Save** — submits the create form and waits for network idle
+- **URL verification** — navigates to `/super-admin/admin/master-products` and asserts the URL matches exactly
+- **Sign out**
+
+```bash
+python -m modules.m07_create_master_product_local_customization
 ```
 
 **To run Group 1 in isolation** (without executing the Shopify / Falcon modules):
@@ -214,7 +240,7 @@ summary table grouped by environment, showing the outcome and total duration
 
 | Command | Scope |
 |---------|-------|
-| `python run_custom_staging_site.py` | Group 1 only — Vivek Custom Staging Site: Flitesports (M01–M04) |
+| `python run_custom_staging_site.py` | Group 1 only — Vivek Custom Staging Site: Flitesports (M01–M04, M07) |
 | `python run_existing_site.py` | Group 2 only — Vivek Existing Site: Flitesports Including Falcon (M05–M06) |
 | `python run_all.py` | Both groups in sequence (full suite) |
 
@@ -228,6 +254,7 @@ summary table grouped by environment, showing the outcome and total duration
   ✓ M02   Create Sales Representative                     PASSED    14.10s
   ✓ M03   Create New Partner (Super-Admin)                PASSED    47.80s
   ✓ M04   Update Admin, Sales Rep & Partner               PASSED    62.50s
+  ✓ M07   Create New Master Product                       PASSED    55.20s
 
 [ Vivek Existing Site — Flitesports (Including Falcon) ]
   ✓ M05   Purchase Products on Shopify Staging            PASSED    38.20s

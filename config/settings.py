@@ -64,6 +64,12 @@ LOGO_OLIVE_GREEN       = _LOGOS_DIR / "flite_logo_olive_green.png"
 # Default logo used by M03 / M04 automation runs
 PARTNER_LOGO_PATH      = LOGO_OLIVE_GREEN
 
+# ── Static test assets — Product image ────────────────────────────────────────
+# Image file uploaded to the Master Product media card during product creation
+# (M07).  Uses the first official Flitesports product image from the shared
+# product images folder on the local machine.
+PRODUCT_IMAGE_PATH     = Path(r"C:\Flitesport_Product_images\product_img1.png")
+
 # ── Commission defaults used in partner creation / update ─────────────────────
 COMMISSION_WHOLESALE        = "45"
 COMMISSION_RETAIL           = "67"

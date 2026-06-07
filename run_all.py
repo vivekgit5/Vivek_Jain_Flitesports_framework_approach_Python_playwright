@@ -10,6 +10,7 @@ two distinct application environments under test:
   M02  Create Sales Representative
   M03  Create New Partner (Super-Admin)
   M04  Update Admin, Sales Rep & Partner
+  M07  Create New Master Product
 
   Group 2 – Vivek Existing Site — Flitesports (Including Falcon)
   ---------------------------------------------------------------
@@ -52,6 +53,7 @@ GROUP_STAGING = {
         ("M02", "modules.m02_create_sales_rep",         "Create Sales Representative"),
         ("M03", "modules.m03_create_new_partner",       "Create New Partner (Super-Admin)"),
         ("M04", "modules.m04_update_users",             "Update Admin, Sales Rep & Partner"),
+        ("M07", "modules.m07_create_master_product_local_customization", "Create New Master Product (Local Customization)"),
     ],
 }
 
