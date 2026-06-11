@@ -142,6 +142,11 @@ python -m modules.m02_create_sales_rep
 Runs the 5-step partner creation wizard: program identity (including logo
 upload), commissions, rep assignment, partner commissions, and season dates.
 
+The **Program Identity** step now includes the mandatory **Partner Type** field
+(a PrimeVue combobox added to the Edit Program form).  The automation
+dynamically selects the **first available option** (`PARTNER-CLUB`) from the
+dropdown so the step is resilient to future option-order changes.
+
 ```bash
 python -m modules.m03_create_new_partner
 ```

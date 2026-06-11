@@ -132,11 +132,14 @@ def _step1_program_identity(page, partner: PartnerData, reporter: XlsxReporter) 
     modal.locator("div.msf-identity-fields > div:nth-of-type(1) input").fill(partner.program_name)
     reporter.add_step("Enter Program Name", "PASS", partner.program_name)
 
-    # Partner type (PrimeVue combobox)
+    # Partner type – select PARTNER-CLUB (first option in the dropdown)
     modal.locator("div.msf-identity-fields").get_by_role("combobox").first.click()
     page.wait_for_timeout(400)
-    page.get_by_role("option", name="partner-CAMP").click()
-    reporter.add_step("Select partner type", "PASS", "partner-CAMP")
+    options = page.locator("[role='option']")
+    options.first.wait_for(state="visible", timeout=8_000)
+    first_option_text = (options.first.text_content() or "PARTNER-CLUB").strip()
+    options.first.click()
+    reporter.add_step("Select partner type", "PASS", first_option_text)
 
     # Sport multiselect – BASEBALL
     modal.locator(
