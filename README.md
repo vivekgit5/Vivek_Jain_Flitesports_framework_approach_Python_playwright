@@ -178,20 +178,27 @@ python -m modules.m04_update_users
 Logs in as CRM super-admin, opens the first partner collection under
 Master Products → Local Customization, and creates a new product end-to-end:
 
-- **Product name** — Faker-generated (`QA VIVEK MASTER PRODUCT MAN <random>`)
-- **Description** — short hardcoded test text entered via Quill rich-text editor
+- **Product name** — Faker-generated (`QA VIVEK MASTER PRODUCT <word> <random>`)
+- **Description** — short test text entered via Quill rich-text editor
 - **Category / gender / sub-gender** — Cotton category, Youth / Boy
 - **Product image** — uploads `product_img1.png` from the configured local path
-- **Product type** — types "cotton blend hooded sweatshirt" into the autocomplete and selects the suggestion
+- **Product type** — types "cotton blend hooded sweatshirt" into the autocomplete;
+  tries ALL-CAPS, mixed-case, and lowercase suggestion variants for resilience
+  against CRM CSS `text-transform` differences, falling back to Tab commit
 - **Color** — GREY
 - **Sport attributes** — BASEBALL, BASKETBALL, LACROSSE
 - **FLITE platform group sport(s)** — selects "COTTON-BLEND COLLECTION - HEAT PRESS"
 - **Custom option** — adds Player Number add-on with YES / NO values
-- **Variant** — adds YOUTH SMALL size; fills unique Faker-generated SKU and price for both rows
-- **Assign variant images** — clicks the image-assign trigger on each variant row and confirms via the modal (2 of 2)
-- **Logo placements** — enables available placement checkboxes
-- **Save** — submits the create form and waits for network idle
-- **URL verification** — navigates to `/super-admin/admin/master-products` and asserts the URL matches exactly
+- **Variant** — adds YOUTH SMALL size; fills Faker-generated SKU and price per row
+- **Assign variant images** — clicks the image-assign trigger on each row (2 of 2)
+- **Save** — submits the create form; waits for `wait_for_url` to confirm the SPA
+  has navigated to the correct collection-management URL (not an intermediate route)
+- **Logo placements** — checks `input.sp-logo-checkbox` elements on the variants
+  edit page (post-save); waits for the `gl-overlay` loading spinner to clear
+  before interacting so pointer events are never intercepted
+- **Save variant page** — persists sidebar attributes; waits for overlay clearance
+  and falls back to `button.sp-btn-primary` CSS class if labelled buttons are absent
+- **URL verification** — asserts `/super-admin/admin/master-products` matches exactly
 - **Sign out**
 
 ```bash
@@ -357,6 +364,23 @@ This constraint is enforced in:
 ## Changelog
 
 ### 2026-06-12
+- **fix(m07):** Resolved four independent issues in the Create Master Product flow:
+  - **Navigation race** — replaced `wait_for_load_state('networkidle')` with
+    `wait_for_url('**/collection-management**')` so the logged URL always reflects
+    the true destination instead of the intermediate `/dashboard` SPA hop.
+  - **Product type autocomplete** — tries ALL-CAPS, mixed-case, and lowercase
+    suggestion variants before falling back to the first autocomplete list item,
+    then Tab commit; handles CRM CSS `text-transform` differences robustly.
+  - **Logo placements** — moved `_check_logo_placements()` to after the initial
+    save redirect where the section actually renders on the variants edit page;
+    targets checkboxes by `input.sp-logo-checkbox` CSS class, removing the
+    brittle section-heading text dependency.
+  - **`gl-overlay` blocking** — added `wait_for_selector('.gl-overlay', state='hidden')`
+    before both logo-placement clicks and the save button so the CRM loading
+    spinner never intercepts pointer events.
+  - **Save button fallback** — added `button.sp-btn-primary` CSS class fallback
+    after the labelled-button loop so the step succeeds even when button text or
+    text-transform differs from expected values.
 - **fix(m04):** Corrected Partner Type dropdown selection in the partner update
   wizard — replaced `get_by_role("option")` (which matched hidden native
   `<option>` elements and caused a 5 s timeout) with the CSS attribute selector
