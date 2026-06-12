@@ -278,14 +278,19 @@ def _update_partner(
     reporter.add_step("Update partner program name", "PASS", data.program_name)
 
     # Partner type — the edit wizard resets this field to an empty state.
-    # Select "partner-CAMP" to satisfy the mandatory field requirement, using
-    # the same PrimeVue combobox interaction as the creation wizard (M03).
+    # Open the PrimeVue combobox and select the first available option so the
+    # mandatory field is satisfied regardless of which types the CRM exposes.
+    # Use the CSS attribute selector [role='option'] (not get_by_role) to target
+    # only explicit PrimeVue overlay items, avoiding hidden native <option> elements.
     modal = page.locator("role=dialog")
     modal.locator("div.msf-identity-fields").get_by_role("combobox").first.click()
-    page.wait_for_timeout(400)
-    page.get_by_role("option", name="partner-CAMP").click()
+    page.wait_for_timeout(600)
+    options = page.locator("[role='option']")
+    options.first.wait_for(state="visible", timeout=8_000)
+    selected_partner_type = (options.first.text_content() or "").strip()
+    options.first.click()
     page.wait_for_timeout(300)
-    reporter.add_step("Select partner type", "PASS", "partner-CAMP")
+    reporter.add_step("Select partner type (first in list)", "PASS", selected_partner_type)
 
     contact_input = page.locator(
         "div:nth-of-type(3) > div.msf-section-body > div:nth-of-type(1) input"

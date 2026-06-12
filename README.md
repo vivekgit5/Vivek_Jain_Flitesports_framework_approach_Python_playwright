@@ -142,10 +142,10 @@ python -m modules.m02_create_sales_rep
 Runs the 5-step partner creation wizard: program identity (including logo
 upload), commissions, rep assignment, partner commissions, and season dates.
 
-The **Program Identity** step now includes the mandatory **Partner Type** field
-(a PrimeVue combobox added to the Edit Program form).  The automation
-dynamically selects the **first available option** (`PARTNER-CLUB`) from the
-dropdown so the step is resilient to future option-order changes.
+The **Program Identity** step includes the mandatory **Partner Type** field
+(a PrimeVue combobox).  The automation dynamically selects the **first
+available option** from the dropdown using a CSS attribute selector
+(`[role='option']`) so the step is resilient to future option-order changes.
 
 ```bash
 python -m modules.m03_create_new_partner
@@ -153,7 +153,22 @@ python -m modules.m03_create_new_partner
 
 #### M04 — Update Admin, Sales Rep, and Partner
 Sequentially updates an existing admin user, a sales rep, and a partner record
-(including partner type selection and commission equality balancing).
+across three form steps:
+
+- **Admin** — updates first name, last name, and phone number.
+- **Sales Rep** — updates role assignment, first name, last name, and phone number.
+- **Partner** — updates program name, Partner Type, contact name, commission fields,
+  and season start date via the multi-step edit wizard.
+
+**Partner Type field** — The edit wizard resets the Partner Type combobox to an
+empty state on open.  The automation dynamically opens the PrimeVue overlay and
+selects the **first available option** (e.g. `PARTNER-CLUB`) using a CSS
+attribute selector (`[role='option']`) so the step is resilient to any future
+option-order or naming changes, without relying on a hardcoded label.
+
+**Commission balancing** — Step 2 reads the read-only *Total FLITE Rep
+Commission* percentage displayed on the panel and mirrors it into every editable
+numeric input so that the "Representatives commission total" validation passes.
 
 ```bash
 python -m modules.m04_update_users
@@ -336,6 +351,31 @@ This constraint is enforced in:
 |--------|---------------|
 | `m03_create_new_partner.py` | `program_name` (Partner creation wizard — Step 1) |
 | `m04_update_users.py` | `program_name` (Partner update flow) |
+
+---
+
+## Changelog
+
+### 2026-06-12
+- **fix(m04):** Corrected Partner Type dropdown selection in the partner update
+  wizard — replaced `get_by_role("option")` (which matched hidden native
+  `<option>` elements and caused a 5 s timeout) with the CSS attribute selector
+  `[role='option']` to target only visible PrimeVue overlay items.  The first
+  available option is now selected dynamically, making the step label-agnostic
+  and resilient to future CRM option changes.
+
+### 2026-06-11
+- **feat(m07):** Add `m07_create_master_product_local_customization` — full
+  end-to-end master product creation under Local Customization, including
+  Quill rich-text description, variant/SKU/price management, image assignment,
+  logo-placement selection, and URL verification.
+
+### 2026-06-10
+- **fix(m03):** Handle mandatory Partner Type field in the New Partner wizard —
+  dynamically select the first PrimeVue overlay option using `[role='option']`
+  (consistent pattern now also applied to M04).
+- **refactor(runners):** Rename `run_staging.py` → `run_custom_staging_site.py`
+  for naming consistency with `run_existing_site.py`.
 
 ---
 
