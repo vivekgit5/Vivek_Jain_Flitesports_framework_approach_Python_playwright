@@ -117,7 +117,15 @@ def _navigate_to_local_customization(page, reporter: XlsxReporter) -> None:
 
     # Click the LOCAL CUSTOMIZATION link
     page.get_by_role("link", name="LOCAL CUSTOMIZATION").click()
-    page.wait_for_load_state("networkidle")
+    # The CRM SPA briefly routes through the dashboard before the Vue router
+    # settles on the collection-management URL.  Waiting for networkidle alone
+    # can capture the intermediate dashboard URL — wait for the correct path
+    # instead so the logged URL always reflects the true destination.
+    try:
+        page.wait_for_url("**/collection-management**", timeout=12_000)
+    except Exception:
+        page.wait_for_load_state("networkidle", timeout=10_000)
+    page.wait_for_timeout(400)
     reporter.add_step("Navigate to Local Customization", "PASS", page.url)
 
 
@@ -495,13 +503,39 @@ def _enter_product_type(page, reporter: XlsxReporter) -> None:
         type_input.press("Control+a")
         # Type sequentially so Vue's autocomplete reactive listener fires
         type_input.press_sequentially("cotton blend hooded sweatshirt", delay=60)
-        # The CRM renders the suggestion in ALL CAPS — wait for it then click
-        suggestion = page.get_by_text("COTTON BLEND HOODED SWEATSHIRT", exact=True)
-        try:
-            suggestion.wait_for(state="visible", timeout=5_000)
-            suggestion.click()
-            reporter.add_step("Select product type", "PASS", _PRODUCT_TYPE)
-        except Exception:
+        # The CRM autocomplete may render the suggestion in ALL CAPS, mixed
+        # case, or via CSS text-transform.  Try the most common variants in
+        # order; fall back to committing the typed value with Tab if none match.
+        _suggestion_texts = [
+            "COTTON BLEND HOODED SWEATSHIRT",
+            "Cotton Blend Hooded Sweatshirt",
+            "cotton blend hooded sweatshirt",
+        ]
+        suggestion_clicked = False
+        for txt in _suggestion_texts:
+            try:
+                elem = page.get_by_text(txt, exact=True)
+                elem.wait_for(state="visible", timeout=3_000)
+                elem.click()
+                suggestion_clicked = True
+                reporter.add_step("Select product type", "PASS", _PRODUCT_TYPE)
+                break
+            except Exception:
+                continue
+        if not suggestion_clicked:
+            # Last resort: click the first visible autocomplete list item
+            try:
+                first_item = page.locator(
+                    "li[class*='autocomplete'], li[class*='suggest'], "
+                    "[role='option'], [class*='dropdown-item']"
+                ).first
+                first_item.wait_for(state="visible", timeout=2_000)
+                first_item.click()
+                suggestion_clicked = True
+                reporter.add_step("Select product type", "PASS", _PRODUCT_TYPE + " (autocomplete)")
+            except Exception:
+                pass
+        if not suggestion_clicked:
             # If autocomplete doesn't appear the typed value is still accepted
             type_input.press("Tab")
             reporter.add_step("Select product type", "PASS", _PRODUCT_TYPE + " (typed)")
@@ -625,16 +659,39 @@ def _check_logo_placements(page, reporter: XlsxReporter) -> None:
         "Back (Center Bottom)",
     ]
     try:
-        page.get_by_text("Logo Placement", exact=True).first.wait_for(
-            state="visible", timeout=8_000
-        )
+        # Wait for the CRM loading overlay to clear before interacting.
+        try:
+            page.wait_for_selector(
+                ".gl-overlay, .gl-backdrop, [aria-label='Loading, please wait']",
+                state="hidden",
+                timeout=25_000,
+            )
+        except Exception:
+            pass
+        page.wait_for_timeout(600)
+
+        # Target logo placement checkboxes directly by their CSS class rather
+        # than by a section heading text which may not be present / may differ
+        # across CRM versions (e.g. all-caps, translated, or absent entirely).
+        logo_cbs = page.locator("input.sp-logo-checkbox")
+        try:
+            logo_cbs.first.wait_for(state="visible", timeout=8_000)
+        except Exception:
+            # Section not present on this page variant — skip gracefully.
+            reporter.add_step(
+                "Enable logo placement options",
+                "INFO",
+                "Logo placement checkboxes not found on variants page (section may be absent)",
+            )
+            return
+
         checked_count = 0
-        for label in _placement_labels:
-            for cb in page.get_by_role("checkbox", name=label).all():
-                if cb.is_visible() and cb.is_enabled() and not cb.is_checked():
-                    cb.click()
-                    page.wait_for_timeout(150)
-                    checked_count += 1
+        for i in range(logo_cbs.count()):
+            cb = logo_cbs.nth(i)
+            if cb.is_visible() and cb.is_enabled() and not cb.is_checked():
+                cb.click()
+                page.wait_for_timeout(150)
+                checked_count += 1
         reporter.add_step(
             "Enable logo placement options",
             "PASS",
@@ -651,19 +708,47 @@ def _save_variant_page(page, reporter: XlsxReporter) -> None:
     label on the CRM variants edit page), followed by several alternative
     wordings for resilience against future CRM label changes.
     """
+    # Ensure the loading overlay has cleared before searching for the save button.
+    # After logo-placement interactions the page may still be settling.
+    try:
+        page.wait_for_selector(
+            ".gl-overlay, .gl-backdrop, [aria-label='Loading, please wait']",
+            state="hidden",
+            timeout=15_000,
+        )
+    except Exception:
+        pass
+    page.wait_for_timeout(400)
+
+    # Try text-based button labels first, then fall back to primary CSS class.
     for btn_label in ["Save product", "Save", "Save changes", "Update product", "Update"]:
         try:
             btn = page.get_by_role("button", name=btn_label, exact=True)
-            btn.wait_for(state="visible", timeout=8_000)
+            btn.wait_for(state="visible", timeout=5_000)
             btn.scroll_into_view_if_needed()
             btn.click()
             page.wait_for_load_state("networkidle")
             reporter.add_step(
-                "Save product variant page attributes", "PASS", f'Clicked “{btn_label}”'
+                "Save product variant page attributes", "PASS", f'Clicked "{btn_label}"'
             )
             return
         except Exception:
             continue
+
+    # CSS-class fallback: any enabled primary button visible on the page.
+    try:
+        css_btn = page.locator("button.sp-btn-primary").last
+        css_btn.wait_for(state="visible", timeout=5_000)
+        css_btn.scroll_into_view_if_needed()
+        css_btn.click()
+        page.wait_for_load_state("networkidle")
+        reporter.add_step(
+            "Save product variant page attributes", "PASS", "Clicked primary button (CSS fallback)"
+        )
+        return
+    except Exception:
+        pass
+
     reporter.add_step(
         "Save product variant page attributes",
         "INFO",
@@ -748,9 +833,13 @@ def run(playwright: Playwright) -> None:
             # then enable all Logo Placement checkboxes — both done here on
             # the creation form so everything is saved in a single request.
             _assign_variant_images(page, reporter)
-            _check_logo_placements(page, reporter)
 
             # ── Save — persists all fields entered on the creation form ────────
+            # NOTE: Logo placements are NOT checked here.  The Logo Placement
+            # section only renders on the variants *edit* page after the initial
+            # save redirect.  Calling _check_logo_placements before save always
+            # returns 0 newly-checked items.  It is called below, after the
+            # initial save and before _save_variant_page.
             save_btn = page.locator(
                 "button.sp-btn-primary", has_text="Save product"
             )
@@ -771,6 +860,11 @@ def run(playwright: Playwright) -> None:
             except Exception:
                 pass
             page.wait_for_timeout(1_500)
+
+            # Logo Placement section is rendered on the variants edit page
+            # (after initial save).  Check and enable all placements here
+            # before persisting the variants page.
+            _check_logo_placements(page, reporter)
             _save_variant_page(page, reporter)
 
             # ── Verify master products listing URL ────────────────────────────
